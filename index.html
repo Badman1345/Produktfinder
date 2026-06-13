@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProduktFinder – Dein KI-Produktberater</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css" rel="stylesheet">
+<style>
+:root{
+  --bg:#FAFAF8; --surface:#FFFFFF; --surface-2:#F3F2EE;
+  --text:#1C1B19; --text-2:#6B6A65; --text-3:#9B9A94;
+  --border:#E5E3DD; --border-2:#D3D1C7;
+  --accent:#534AB7; --accent-light:#EEEDFE;
+  --amazon:#FF9900;
+  --radius:12px; --radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px;}
+
+/* HEADER */
+header{padding:28px 0 16px;}
+.logo{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:600;}
+.logo .dot{width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;}
+
+/* MASCOT */
+.mascot-wrap{display:flex;align-items:flex-end;gap:14px;margin:24px 0;}
+.mascot-svg{flex-shrink:0;}
+.bubble{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 16px 4px;padding:14px 18px;font-size:15px;color:var(--text);line-height:1.55;max-width:560px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+.bubble b{font-weight:600;color:var(--accent);}
+
+/* SEARCH */
+.search-row{display:flex;gap:10px;margin-bottom:12px;}
+.search-row textarea{flex:1;min-height:78px;padding:13px 16px;font-size:15px;border:1px solid var(--border-2);border-radius:var(--radius);background:var(--surface);color:var(--text);resize:none;font-family:inherit;}
+.search-row textarea:focus{outline:none;border-color:var(--accent);}
+.btn-main{padding:0 24px;font-size:14px;font-weight:600;cursor:pointer;background:var(--text);color:#fff;border:none;border-radius:var(--radius);transition:opacity .15s;min-width:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+.btn-main:hover{opacity:.85;}
+.btn-main:disabled{opacity:.35;cursor:not-allowed;}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:28px;}
+.chip{font-size:13px;padding:6px 13px;border-radius:99px;border:1px solid var(--border-2);cursor:pointer;color:var(--text-2);background:var(--surface);transition:.1s;}
+.chip:hover{background:var(--surface-2);border-color:var(--accent);}
+
+/* SPINNER */
+.loading{text-align:center;padding:40px;color:var(--text-2);font-size:15px;}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border-2);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:-3px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.toolbar-label{font-size:14px;color:var(--text-2);}
+.btn-sm{font-size:13px;padding:7px 14px;border-radius:99px;border:1px solid var(--border-2);cursor:pointer;background:var(--surface);color:var(--text);display:inline-flex;align-items:center;gap:5px;}
+.btn-sm:hover{background:var(--surface-2);}
+.btn-sm.active{background:var(--text);color:#fff;border-color:var(--text);}
+
+/* CARDS */
+.results{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:11px;transition:border-color .15s,transform .15s;}
+.card:hover{border-color:var(--border-2);transform:translateY(-2px);}
+.card.selected{border:2px solid var(--accent);}
+.card-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;width:fit-content;}
+.badge-cheap{background:#EAF3DE;color:#3B6D11;}
+.badge-rated{background:#FAEEDA;color:#854F0B;}
+.badge-quality{background:#EEEDFE;color:#3C3489;}
+.badge-value{background:#E1F5EE;color:#0F6E56;}
+.badge-premium{background:#FBEAF0;color:#72243E;}
+.badge-popular{background:#E6F1FB;color:#0C447C;}
+.card h3{font-size:16px;font-weight:600;line-height:1.35;}
+.card-desc{font-size:13.5px;color:var(--text-2);line-height:1.55;}
+.card-price{font-size:19px;font-weight:600;}
+.stars{color:#BA7517;font-size:13px;}
+.card-meta{font-size:12px;color:var(--text-2);}
+.feature{font-size:12.5px;color:var(--text-2);}
+.review-quote{padding:8px 12px;background:var(--surface-2);border-radius:var(--radius-sm);font-size:12.5px;color:var(--text-2);font-style:italic;}
+.btn-amazon{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:11px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--amazon);color:#111;border:none;border-radius:var(--radius-sm);text-decoration:none;transition:opacity .15s;}
+.btn-amazon:hover{opacity:.88;}
+.affiliate-note{font-size:11px;color:var(--text-3);text-align:center;}
+.select-toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2);cursor:pointer;padding-top:8px;border-top:1px solid var(--border);}
+
+/* COMPARE */
+.compare-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);}
+.compare-wrap table{width:100%;border-collapse:collapse;font-size:13.5px;}
+.compare-wrap th{padding:12px 14px;border-bottom:1px solid var(--border-2);color:var(--text-2);font-weight:600;text-align:left;white-space:nowrap;background:var(--surface-2);}
+.compare-wrap td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top;}
+.compare-wrap tr:last-child td{border-bottom:none;}
+.compare-wrap td:first-child{color:var(--text-2);font-size:12.5px;white-space:nowrap;font-weight:500;}
+
+/* CHAT */
+.chat-section{margin-top:32px;border-top:1px solid var(--border);padding-top:24px;}
+.chat-title{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.quick-btns{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;}
+.quick-btn{font-size:12.5px;padding:6px 12px;border-radius:99px;border:1px solid var(--border-2);cursor:pointer;background:var(--surface);color:var(--text-2);}
+.quick-btn:hover{background:var(--surface-2);}
+.chat-log{display:flex;flex-direction:column;gap:12px;margin-bottom:14px;max-height:340px;overflow-y:auto;padding:4px;}
+.msg{font-size:14px;line-height:1.55;padding:11px 15px;border-radius:14px;max-width:88%;}
+.msg.user{background:var(--text);color:#fff;align-self:flex-end;border-radius:14px 14px 4px 14px;}
+.msg.bot{background:var(--surface);color:var(--text);align-self:flex-start;border-radius:14px 14px 14px 4px;border:1px solid var(--border);}
+.chat-input-row{display:flex;gap:10px;}
+.chat-input-row input{flex:1;padding:11px 16px;font-size:14px;border:1px solid var(--border-2);border-radius:99px;background:var(--surface);color:var(--text);font-family:inherit;}
+.chat-input-row input:focus{outline:none;border-color:var(--accent);}
+.chat-send{padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;background:var(--text);color:#fff;border:none;border-radius:99px;}
+.chat-send:disabled{opacity:.4;cursor:not-allowed;}
+
+.error{padding:14px 18px;background:#FCEBEB;color:#A32D2D;border-radius:var(--radius-sm);font-size:14px;margin-top:16px;}
+footer{margin:48px 0 32px;font-size:12px;color:var(--text-3);text-align:center;line-height:1.6;}
+footer a{color:var(--text-2);}
+
+@media(max-width:600px){
+  .mascot-svg{width:52px;height:52px;}
+  .results{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo"><span class="dot"><i class="ti ti-sparkles"></i></span> ProduktFinder</div>
+  </header>
+
+  <!-- MASCOT -->
+  <div class="mascot-wrap">
+    <svg class="mascot-svg" id="mascotSvg" width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="30" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="1.5"/>
+      <circle cx="32" cy="26" r="14" fill="#534AB7"/>
+      <circle class="eye" cx="27" cy="24" r="3.5" fill="white"/>
+      <circle class="eye" cx="37" cy="24" r="3.5" fill="white"/>
+      <circle cx="27.8" cy="24.6" r="1.8" fill="#26215C"/>
+      <circle cx="37.8" cy="24.6" r="1.8" fill="#26215C"/>
+      <path id="mascotMouth" d="M27 30 Q32 34 37 30" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <rect x="20" y="38" width="24" height="16" rx="8" fill="#534AB7"/>
+      <rect x="10" y="40" width="8" height="12" rx="4" fill="#7F77DD"/>
+      <rect x="46" y="40" width="8" height="12" rx="4" fill="#7F77DD"/>
+      <circle cx="32" cy="10" r="4" fill="#FF9900"/>
+      <path d="M32 6 L33.5 10 L32 9 L30.5 10 Z" fill="#FF9900"/>
+    </svg>
+    <div class="bubble" id="mascotBubble">
+      <b>Hey! Ich bin dein Produktberater ✦</b><br>
+      Was suchst du heute? Beschreibe einfach dein Wunschprodukt – ich finde die besten Optionen für dich!
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-row">
+    <textarea id="query" placeholder="z.B. elektrische Ultraschallzahnbürste schwarz, leise, lange Akkulaufzeit..."></textarea>
+    <button class="btn-main" id="searchBtn" onclick="doSearch()"><i class="ti ti-sparkles"></i> Suchen</button>
+  </div>
+  <div class="chips">
+    <button class="chip" onclick="sq('Elektrische Ultraschallzahnbürste schwarz leise')">Ultraschallzahnbürste</button>
+    <button class="chip" onclick="sq('Kabellose Kopfhörer Noise Cancelling unter 150€')">Kopfhörer ANC</button>
+    <button class="chip" onclick="sq('Saugroboter Tierhaare WLAN')">Saugroboter</button>
+    <button class="chip" onclick="sq('Standmixer leise Smoothies')">Standmixer</button>
+    <button class="chip" onclick="sq('Smartwatch mit Schlaftracking')">Smartwatch</button>
+  </div>
+
+  <div id="output"></div>
+
+  <footer>
+    Diese Seite enthält Affiliate-Links. Als Amazon-Partner verdienen wir an qualifizierten Verkäufen.<br>
+    Preise und Verfügbarkeit können abweichen – maßgeblich ist der Preis auf Amazon zum Zeitpunkt des Kaufs.
+  </footer>
+
+</div>
+
+<script>
+// ====== KONFIGURATION ======
+const TAG = "sunshinevib0d-21";          // Dein Amazon Affiliate-Tag
+const API_ENDPOINT = "/api/recommend";   // Dein Backend-Endpunkt (siehe README)
+// ============================
+
+let allProducts=[], selectedIds=new Set(), chatHistory=[], viewMode="grid";
+
+const BADGE_MAP=[
+  ["günstig","badge-cheap","ti-coin","Günstigste Option"],
+  ["bewertung","badge-rated","ti-star","Beste Bewertung"],
+  ["qualität","badge-quality","ti-medal","Beste Qualität"],
+  ["preis-leist","badge-value","ti-scale","Bestes Preis-Leistungs-Verhältnis"],
+  ["premium","badge-premium","ti-crown","Premium"],
+  ["beliebt","badge-popular","ti-trending-up","Beliebteste Wahl"],
+];
+function getBadge(c){const l=c.toLowerCase();const h=BADGE_MAP.find(([k])=>l.includes(k));return h?[h[1],h[2],h[3]]:["badge-popular","ti-tag",c];}
+function sq(t){document.getElementById('query').value=t;}
+function stars(r){const f=Math.round(r);return'★'.repeat(f)+'☆'.repeat(5-f);}
+function amzLink(q){return`https://www.amazon.de/s?k=${encodeURIComponent(q)}&tag=${TAG}`;}
+
+// Liest die KI-Antwort robust aus – auch wenn etwas Text drumherum steht
+// oder die Antwort am Ende leicht abgeschnitten wurde.
+function parseProducts(raw){
+  let t=raw.replace(/```json|```/g,"").trim();
+  // Nur den Teil vom ersten [ bis zum letzten ] nehmen
+  const start=t.indexOf('['); const end=t.lastIndexOf(']');
+  if(start!==-1 && end!==-1 && end>start) t=t.slice(start,end+1);
+  try{ return JSON.parse(t); }
+  catch(e){
+    // Notfall: einzelne vollständige Objekte einsammeln
+    const objs=[]; let depth=0,buf='',inObj=false;
+    for(const ch of t){
+      if(ch==='{'){depth++;inObj=true;}
+      if(inObj)buf+=ch;
+      if(ch==='}'){depth--;if(depth===0&&inObj){try{objs.push(JSON.parse(buf));}catch{}buf='';inObj=false;}}
+    }
+    if(objs.length)return objs;
+    throw e;
+  }
+}
+function setMascot(t,mood="happy"){
+  document.getElementById('mascotBubble').innerHTML=t;
+  const m=document.getElementById('mascotMouth');
+  if(mood==="thinking")m.setAttribute('d','M27 31 Q32 31 37 31');
+  else if(mood==="excited")m.setAttribute('d','M26 29 Q32 35 38 29');
+  else m.setAttribute('d','M27 30 Q32 34 37 30');
+}
+// Blinzeln
+setInterval(()=>{
+  document.querySelectorAll('.eye').forEach(e=>{e.style.transition='all .1s';e.setAttribute('ry','0.4');setTimeout(()=>e.removeAttribute('ry'),130);});
+},3800);
+
+async function callAPI(payload){
+  const resp=await fetch(API_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  if(!resp.ok)throw new Error("Server antwortet nicht ("+resp.status+")");
+  const data=await resp.json();
+  return data.text||"";
+}
+
+async function doSearch(){
+  const query=document.getElementById('query').value.trim();
+  if(!query)return;
+  const btn=document.getElementById('searchBtn'),out=document.getElementById('output');
+  btn.disabled=true;selectedIds.clear();chatHistory=[];
+  setMascot('<span class="spinner"></span> Ich suche die besten Produkte für dich…','thinking');
+  out.innerHTML='<div class="loading"><span class="spinner"></span>Top-Empfehlungen werden geladen…</div>';
+
+  const prompt=`Du bist ein Produktberater für einen deutschen Online-Shop. Der Nutzer sucht: "${query}"
+
+Erstelle genau 6 Produktempfehlungen als JSON-Array. Jedes Objekt:
+- id: Zahl 1-6
+- name: realistischer Produktname mit Marke und Modell
+- amazonSearch: präziser Amazon-DE-Suchbegriff (3-6 Wörter)
+- category: genau eine: "Günstigste Option"|"Beste Bewertung"|"Beste Qualität"|"Bestes Preis-Leistungs-Verhältnis"|"Premium"|"Beliebteste Wahl"
+- price: realistischer Preis z.B. "€39,99"
+- rating: Zahl 3.5-5.0
+- reviews: Anzahl Bewertungen als Zahl
+- description: 2 Sätze warum es passt
+- keyFeatures: Array mit genau 3 kurzen Stichpunkten (max 5 Wörter)
+- pros: Array mit 2 Vorteilen
+- cons: Array mit 1 Nachteil
+- fakeReview: ein realistischer Kundensatz (1 Satz, positiv)
+
+Jede category nur einmal. Antworte NUR mit dem JSON-Array.`;
+
+  try{
+    const text=await callAPI({mode:"search",prompt});
+    allProducts=parseProducts(text);
+    viewMode="grid";chatHistory=[];
+    setMascot(`<b>Hier sind deine Top-Empfehlungen! ✦</b><br>Ich habe <b>${allProducts.length} passende Produkte</b> gefunden. Wähle bis zu 3 aus zum Vergleichen, oder frag mich unten!`,'excited');
+    renderResults();
+  }catch(e){
+    out.innerHTML=`<div class="error"><strong>Fehler:</strong> ${e.message}<br><small>Prüfe ob dein Backend unter ${API_ENDPOINT} läuft.</small></div>`;
+    setMascot('Ups, da ist etwas schiefgelaufen. Versuch es nochmal!');
+  }
+  btn.disabled=false;
+}
+
+function renderResults(){
+  const out=document.getElementById('output'),n=selectedIds.size;
+  out.innerHTML=`
+    <div class="toolbar">
+      <span class="toolbar-label">Ansicht:</span>
+      <button class="btn-sm ${viewMode==='grid'?'active':''}" onclick="setView('grid')"><i class="ti ti-layout-grid"></i> Karten</button>
+      <button class="btn-sm ${viewMode==='compare'?'active':''}" onclick="setView('compare')"><i class="ti ti-columns"></i> Vergleich ${n>1?'('+n+')':''}</button>
+      <span style="margin-left:auto;font-size:12px;color:var(--text-3);">${n>0?n+' ausgewählt':'Bis zu 3 zum Vergleich auswählen'}</span>
+    </div>
+    <div id="cardsOrTable"></div>
+    <div id="chatSection"></div>`;
+  renderView();renderChat();
+}
+function setView(m){
+  if(m==='compare'&&selectedIds.size<2){setMascot('Wähle mindestens <b>2 Produkte</b> aus zum Vergleichen!','thinking');return;}
+  viewMode=m;renderResults();
+}
+function renderView(){const el=document.getElementById('cardsOrTable');viewMode==='compare'?renderCompare(el):renderGrid(el);}
+
+function renderGrid(el){
+  const grid=document.createElement('div');grid.className='results';
+  allProducts.forEach(p=>{
+    const[bC,bI,bL]=getBadge(p.category),sel=selectedIds.has(p.id);
+    const card=document.createElement('div');card.className='card'+(sel?' selected':'');
+    card.innerHTML=`
+      <div><span class="card-badge ${bC}"><i class="ti ${bI}"></i>${bL}</span></div>
+      <h3>${p.name}</h3>
+      <p class="card-desc">${p.description}</p>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        ${p.keyFeatures.map(f=>`<span class="feature"><i class="ti ti-check" style="color:#3B6D11;margin-right:4px;"></i>${f}</span>`).join('')}
+      </div>
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+        <span class="card-price">${p.price}</span>
+        <span class="stars">${stars(p.rating)}</span>
+        <span class="card-meta">${p.rating.toFixed(1)} (${p.reviews.toLocaleString('de-DE')})</span>
+      </div>
+      <div class="review-quote">"${p.fakeReview}"</div>
+      <div style="margin-top:auto;padding-top:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">
+        <a class="btn-amazon" href="${amzLink(p.amazonSearch)}" target="_blank" rel="noopener"><i class="ti ti-shopping-cart"></i> Auf Amazon ansehen</a>
+        <div class="affiliate-note">* Affiliate-Link</div>
+        <label class="select-toggle"><input type="checkbox" ${sel?'checked':''} onchange="toggleSelect(${p.id},this.checked)"> Zum Vergleich</label>
+      </div>`;
+    grid.appendChild(card);
+  });
+  el.innerHTML='';el.appendChild(grid);
+}
+
+function renderCompare(el){
+  const prods=allProducts.filter(p=>selectedIds.has(p.id));
+  let h=`<div class="compare-wrap"><table><thead><tr><th style="min-width:110px;">Eigenschaft</th>`;
+  prods.forEach(p=>h+=`<th>${p.name}</th>`);
+  h+=`</tr></thead><tbody>`;
+  const rows=[
+    ["Kategorie",p=>p.category],
+    ["Preis",p=>`<b>${p.price}</b>`],
+    ["Bewertung",p=>`<span class="stars">${stars(p.rating)}</span> ${p.rating.toFixed(1)}`],
+    ["Anzahl Bewertungen",p=>p.reviews.toLocaleString('de-DE')],
+    ["Vorteile",p=>p.pros.map(x=>`✓ ${x}`).join('<br>')],
+    ["Nachteil",p=>`✗ ${p.cons[0]}`],
+    ["Features",p=>p.keyFeatures.join('<br>')],
+    ["Kundenmeinung",p=>`<em style="color:var(--text-2);">"${p.fakeReview}"</em>`],
+    ["",p=>`<a class="btn-amazon" href="${amzLink(p.amazonSearch)}" target="_blank" rel="noopener" style="padding:8px 12px;font-size:12px;"><i class="ti ti-shopping-cart"></i> Amazon</a>`],
+  ];
+  rows.forEach(([l,fn])=>{h+=`<tr><td>${l}</td>`;prods.forEach(p=>h+=`<td>${fn(p)}</td>`);h+=`</tr>`;});
+  h+=`</tbody></table></div><div style="margin-top:10px;"><button class="btn-sm" onclick="setView('grid')"><i class="ti ti-arrow-left"></i> Zurück</button></div>`;
+  el.innerHTML=h;
+}
+
+function toggleSelect(id,checked){
+  if(checked){if(selectedIds.size>=3){setMascot('Maximal <b>3 Produkte</b> gleichzeitig vergleichen!','thinking');renderResults();return;}selectedIds.add(id);}
+  else selectedIds.delete(id);
+  if(selectedIds.size>=2)setMascot(`<b>${selectedIds.size} Produkte ausgewählt</b> – klick auf "Vergleich"!`,'excited');
+  renderResults();
+}
+
+function renderChat(){
+  const sec=document.getElementById('chatSection');if(!sec)return;
+  sec.innerHTML=`
+    <div class="chat-section">
+      <div class="chat-title"><i class="ti ti-message-circle"></i> Frag mich zu den Produkten</div>
+      <div class="quick-btns">
+        <button class="quick-btn" onclick="askQuick('Was sind die wichtigsten Unterschiede zwischen den Produkten?')">Hauptunterschiede?</button>
+        <button class="quick-btn" onclick="askQuick('Welches Produkt empfiehlst du mir am meisten?')">Deine Empfehlung?</button>
+        <button class="quick-btn" onclick="askQuick('Lies mir die Kundenbewertungen vor')">Bewertungen vorlesen</button>
+        <button class="quick-btn" onclick="askQuick('Was können die Produkte und was nicht?')">Was können sie?</button>
+      </div>
+      <div class="chat-log" id="chatLog"></div>
+      <div class="chat-input-row">
+        <input id="chatInput" type="text" placeholder="Stell mir eine Frage…" onkeydown="if(event.key==='Enter')sendChat()"/>
+        <button class="chat-send" id="chatSend" onclick="sendChat()"><i class="ti ti-send"></i></button>
+      </div>
+    </div>`;
+  renderChatLog();
+}
+function renderChatLog(){
+  const log=document.getElementById('chatLog');if(!log)return;
+  if(!chatHistory.length){log.innerHTML=`<div style="font-size:13px;color:var(--text-3);text-align:center;padding:10px;">Noch keine Fragen – leg einfach los!</div>`;return;}
+  log.innerHTML=chatHistory.map(m=>`<div class="msg ${m.role==='user'?'user':'bot'}">${m.content}</div>`).join('');
+  log.scrollTop=log.scrollHeight;
+}
+function askQuick(q){document.getElementById('chatInput').value=q;sendChat();}
+
+async function sendChat(){
+  const inp=document.getElementById('chatInput'),send=document.getElementById('chatSend');
+  const q=inp.value.trim();if(!q||!allProducts.length)return;
+  inp.value='';send.disabled=true;
+  chatHistory.push({role:'user',content:q});
+  chatHistory.push({role:'assistant',content:'<span class="spinner"></span>'});
+  renderChatLog();setMascot('Ich überlege…','thinking');
+
+  const summary=allProducts.map(p=>`${p.name} (${p.category}, ${p.price}, ${p.rating}★, Pros: ${p.pros.join(', ')}, Con: ${p.cons[0]}, Kundenmeinung: "${p.fakeReview}")`).join('\n');
+  const prompt=`Du bist ein freundlicher Produktberater. Aktuelle Empfehlungen:\n${summary}\n\nBeantworte auf Deutsch, kurz (max 4 Sätze). Bei Fragen nach Bewertungen zitiere die Kundenmeinungen.\n\nFrage: ${q}`;
+
+  try{
+    const answer=await callAPI({mode:"chat",prompt});
+    chatHistory[chatHistory.length-1]={role:'assistant',content:answer.trim()};
+    setMascot('Ich hoffe das hilft! Noch mehr Fragen?','happy');
+  }catch(e){
+    chatHistory[chatHistory.length-1]={role:'assistant',content:'Entschuldigung, da ist etwas schiefgelaufen.'};
+  }
+  renderChatLog();send.disabled=false;
+}
+
+document.getElementById('query').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSearch();}});
+</script>
+</body>
+</html>
