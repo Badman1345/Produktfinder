@@ -4,8 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ProduktFinder – Dein KI-Produktberater</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Keine externen Google Fonts (DSGVO). Wir nutzen System-Schriften. -->
 <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css" rel="stylesheet">
 <style>
 :root{
@@ -17,7 +16,7 @@
   --radius:12px; --radius-sm:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;}
 .wrap{max-width:1080px;margin:0 auto;padding:0 20px;}
 
 /* HEADER */
@@ -162,6 +161,9 @@ footer a{color:var(--text-2);}
   <div id="output"></div>
 
   <footer>
+    <p style="margin-bottom:8px;">
+      <a href="/impressum.html">Impressum</a> &nbsp;·&nbsp; <a href="/datenschutz.html">Datenschutz</a>
+    </p>
     Diese Seite enthält Affiliate-Links. Als Amazon-Partner verdienen wir an qualifizierten Verkäufen.<br>
     Preise und Verfügbarkeit können abweichen – maßgeblich ist der Preis auf Amazon zum Zeitpunkt des Kaufs.
   </footer>
