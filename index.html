@@ -59,6 +59,11 @@ header{padding:28px 0 16px;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:11px;transition:border-color .15s,transform .15s;}
 .card:hover{border-color:var(--border-2);transform:translateY(-2px);}
 .card.selected{border:2px solid var(--accent);}
+.card-visual{height:96px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent-light),var(--surface-2));display:flex;align-items:center;justify-content:center;font-size:46px;margin-bottom:2px;}
+.skeleton{gap:10px;}
+.sk{background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:shimmer 1.4s ease infinite;border-radius:6px;height:13px;}
+.sk-visual{height:96px;border-radius:var(--radius-sm);}
+@keyframes shimmer{0%{background-position:100% 0;}100%{background-position:0 0;}}
 .card-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;width:fit-content;}
 .badge-cheap{background:#EAF3DE;color:#3B6D11;}
 .badge-rated{background:#FAEEDA;color:#854F0B;}
@@ -229,7 +234,7 @@ async function doSearch(){
   const btn=document.getElementById('searchBtn'),out=document.getElementById('output');
   btn.disabled=true;selectedIds.clear();chatHistory=[];
   setMascot('<span class="spinner"></span> Ich suche die besten Produkte für dich…','thinking');
-  out.innerHTML='<div class="loading"><span class="spinner"></span>Top-Empfehlungen werden geladen…</div>';
+  out.innerHTML='<div class="results">'+Array(6).fill('<div class="card skeleton"><div class="sk sk-visual"></div><div class="sk sk-line" style="width:40%"></div><div class="sk sk-line" style="width:85%"></div><div class="sk sk-line" style="width:70%"></div><div class="sk sk-line" style="width:30%;height:22px;margin-top:6px"></div><div class="sk sk-line" style="width:100%;height:38px;margin-top:8px"></div></div>').join('')+'</div>';
 
   const prompt=`Du bist ein Produktberater für einen deutschen Online-Shop. Der Nutzer sucht: "${query}"
 
@@ -246,6 +251,7 @@ Erstelle genau 6 Produktempfehlungen als JSON-Array. Jedes Objekt:
 - pros: Array mit 2 Vorteilen
 - cons: Array mit 1 Nachteil
 - fakeReview: ein realistischer Kundensatz (1 Satz, positiv)
+- emoji: ein einzelnes passendes Emoji für das Produkt (z.B. 🪥 für Zahnbürste, 🎧 für Kopfhörer)
 
 Jede category nur einmal. Antworte NUR mit dem JSON-Array.`;
 
@@ -287,6 +293,7 @@ function renderGrid(el){
     const[bC,bI,bL]=getBadge(p.category),sel=selectedIds.has(p.id);
     const card=document.createElement('div');card.className='card'+(sel?' selected':'');
     card.innerHTML=`
+      <div class="card-visual">${p.emoji||'🛍️'}</div>
       <div><span class="card-badge ${bC}"><i class="ti ${bI}"></i>${bL}</span></div>
       <h3>${p.name}</h3>
       <p class="card-desc">${p.description}</p>
