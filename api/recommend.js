@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "ANTHROPIC_API_KEY ist nicht gesetzt (Vercel → Settings → Environment Variables, danach Redeploy)." });
   }
 
-  const maxTokens = mode === "chat" ? 500 : 1500;
+  const maxTokens = mode === "chat" ? 600 : 4000;
 
   try {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
