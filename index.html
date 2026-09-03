@@ -25,10 +25,24 @@ header{padding:28px 0 16px;}
 .logo .dot{width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;}
 
 /* MASCOT */
-.mascot-wrap{display:flex;align-items:flex-end;gap:14px;margin:24px 0;}
-.mascot-svg{flex-shrink:0;}
-.bubble{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 16px 4px;padding:14px 18px;font-size:15px;color:var(--text);line-height:1.55;max-width:560px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+.mascot-wrap{display:flex;align-items:center;gap:16px;margin:24px 0;}
+.mascot-svg{flex-shrink:0;width:96px;height:96px;animation:mascotFloat 3.6s ease-in-out infinite;}
+.mascot-svg .eye{transform-box:fill-box;transform-origin:center;animation:mascotBlink 5.2s ease-in-out infinite;}
+.mascot-svg .eye:nth-of-type(2){animation-delay:.04s;}
+@keyframes mascotFloat{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-5px) rotate(-1deg);}}
+@keyframes mascotBlink{0%,90%,100%{transform:scaleY(1);}94%{transform:scaleY(.1);}}
+.bubble{position:relative;margin-left:10px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 18px;font-size:15px;color:var(--text);line-height:1.55;max-width:560px;box-shadow:0 1px 2px rgba(0,0,0,.03);min-height:1.6em;}
+.bubble::before{content:'';position:absolute;left:-7px;top:50%;transform:translateY(-50%) rotate(45deg);width:13px;height:13px;background:var(--surface);border-left:1px solid var(--border);border-bottom:1px solid var(--border);}
 .bubble b{font-weight:600;color:var(--accent);}
+.bubble .sugg{display:inline-block;background:var(--accent-light);color:var(--accent);padding:1px 8px;border-radius:6px;font-weight:600;cursor:pointer;transition:background .12s;}
+.bubble .sugg:hover{background:#DFDCFB;}
+
+/* FLIEGENDER MASCOT (zeigt nach der Suche auf die Empfehlung) */
+.mascot-flying{position:fixed;top:0;left:0;z-index:60;pointer-events:none;transform:translate(0,0) scale(1);transition:transform 1.05s cubic-bezier(.34,1.56,.64,1);}
+.mascot-flying .fly-svg{width:100%;height:100%;display:block;animation:none;}
+.mascot-flying .arm-r{transform-origin:50px 40px;transition:transform .35s cubic-bezier(.34,1.56,.64,1);}
+.mascot-flying.pointing .arm-r{transform:rotate(58deg) scaleY(1.55);}
+.fly-bubble{position:absolute;left:100%;top:6px;margin-left:12px;min-width:150px;max-width:220px;white-space:normal;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:0;transition:opacity .25s ease;}
 
 /* SEARCH */
 .search-row{display:flex;gap:10px;margin-bottom:12px;}
@@ -109,7 +123,7 @@ footer{margin:48px 0 32px;font-size:12px;color:var(--text-3);text-align:center;l
 footer a{color:var(--text-2);}
 
 @media(max-width:600px){
-  .mascot-svg{width:52px;height:52px;}
+  .mascot-svg{width:72px;height:72px;}
   .results{grid-template-columns:1fr;}
 }
 </style>
@@ -132,8 +146,8 @@ footer a{color:var(--text-2);}
       <circle cx="37.8" cy="24.6" r="1.8" fill="#26215C"/>
       <path id="mascotMouth" d="M27 30 Q32 34 37 30" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round"/>
       <rect x="20" y="38" width="24" height="16" rx="8" fill="#534AB7"/>
-      <rect x="10" y="40" width="8" height="12" rx="4" fill="#7F77DD"/>
-      <rect x="46" y="40" width="8" height="12" rx="4" fill="#7F77DD"/>
+      <rect class="arm arm-l" x="10" y="40" width="8" height="12" rx="4" fill="#7F77DD"/>
+      <rect class="arm arm-r" x="46" y="40" width="8" height="12" rx="4" fill="#7F77DD"/>
       <circle cx="32" cy="10" r="4" fill="#FF9900"/>
       <path d="M32 6 L33.5 10 L32 9 L30.5 10 Z" fill="#FF9900"/>
     </svg>
@@ -208,17 +222,170 @@ function parseProducts(raw){
     throw e;
   }
 }
-function setMascot(t,mood="happy"){
-  document.getElementById('mascotBubble').innerHTML=t;
-  const m=document.getElementById('mascotMouth');
-  if(mood==="thinking")m.setAttribute('d','M27 31 Q32 31 37 31');
-  else if(mood==="excited")m.setAttribute('d','M26 29 Q32 35 38 29');
-  else m.setAttribute('d','M27 30 Q32 34 37 30');
+const MOUTH_SHAPES={
+  happy:'M27 30 Q32 34 37 30',
+  thinking:'M27 31 Q32 31 37 31',
+  excited:'M26 29 Q32 35 38 29'
+};
+const TALK_SHAPES=['M27 30 Q32 33 37 30','M28 30 Q32 26 36 30','M27 31 Q32 32 37 31'];
+let mascotTalkTimer=null;
+
+function setMouthMood(mood){
+  document.getElementById('mascotMouth').setAttribute('d',MOUTH_SHAPES[mood]||MOUTH_SHAPES.happy);
 }
-// Blinzeln
-setInterval(()=>{
-  document.querySelectorAll('.eye').forEach(e=>{e.style.transition='all .1s';e.setAttribute('ry','0.4');setTimeout(()=>e.removeAttribute('ry'),130);});
-},3800);
+
+// Tippt HTML Knoten für Knoten in ein Zielelement – Tags (z.B. <b>, klickbare
+// Vorschläge) bleiben dabei intakt, weil sie als eigene DOM-Knoten übernommen werden.
+function typeInto(el,html,speed,onDone){
+  el.innerHTML='';
+  const source=document.createElement('div');
+  source.innerHTML=html;
+  function typeText(text,parent,done){
+    let i=0;
+    const node=document.createTextNode('');
+    parent.appendChild(node);
+    (function step(){
+      if(i>=text.length){done();return;}
+      node.textContent+=text[i++];
+      setTimeout(step,speed);
+    })();
+  }
+  function typeChildren(src,destParent,done){
+    const kids=Array.from(src.childNodes);
+    let i=0;
+    (function next(){
+      if(i>=kids.length){done();return;}
+      const node=kids[i++];
+      if(node.nodeType===Node.TEXT_NODE){typeText(node.textContent,destParent,next);}
+      else{
+        const clone=node.cloneNode(false);
+        destParent.appendChild(clone);
+        typeChildren(node,clone,next);
+      }
+    })();
+  }
+  typeChildren(source,el,onDone||function(){});
+}
+
+// Lässt den Berater seinen Text "sprechen": Buchstabe für Buchstabe, mit
+// mitlaufender Mundbewegung.
+function setMascot(html,mood="happy"){
+  clearInterval(mascotTalkTimer);
+  const bubble=document.getElementById('mascotBubble');
+  const counter=document.createElement('div');counter.innerHTML=html;
+  const totalChars=(counter.textContent||'').length;
+  const speed=totalChars>90?10:20;
+  let talking=true,shapeIdx=0;
+  mascotTalkTimer=setInterval(()=>{
+    if(!talking)return;
+    document.getElementById('mascotMouth').setAttribute('d',TALK_SHAPES[shapeIdx%TALK_SHAPES.length]);
+    shapeIdx++;
+  },120);
+  typeInto(bubble,html,speed,()=>{talking=false;clearInterval(mascotTalkTimer);setMouthMood(mood);});
+}
+
+// Klick auf ein lila hinterlegtes Vorschlagswort übernimmt den passenden Suchbegriff.
+document.getElementById('mascotBubble').addEventListener('click',e=>{
+  if(e.target.classList.contains('sugg')){
+    const q=document.getElementById('query');
+    q.value=e.target.dataset.fill||e.target.textContent;
+    q.focus();
+  }
+});
+
+// Der Mascot fliegt nach der Suche zur Empfehlungs-Karte, zeigt darauf
+// und sagt kurz "Meine Empfehlung".
+function flyMascotToRecommendation(){
+  document.querySelectorAll('.mascot-flying').forEach(el=>el.remove());
+  const original=document.getElementById('mascotSvg');
+  if(!original)return;
+  original.style.opacity='1';
+  const valueBadge=document.querySelector('#output .badge-value');
+  const target=(valueBadge&&valueBadge.closest('.card'))||document.querySelector('#output .card');
+  if(!target)return;
+
+  const startRect=original.getBoundingClientRect();
+  const endRect=target.getBoundingClientRect();
+  original.style.opacity='0';
+
+  const flyWrap=document.createElement('div');
+  flyWrap.className='mascot-flying';
+  flyWrap.style.width=startRect.width+'px';
+  flyWrap.style.height=startRect.height+'px';
+  flyWrap.style.left=startRect.left+'px';
+  flyWrap.style.top=startRect.top+'px';
+
+  const clone=original.cloneNode(true);
+  const flyMouth=clone.querySelector('#mascotMouth');
+  clone.removeAttribute('id');
+  clone.querySelectorAll('[id]').forEach(elem=>elem.removeAttribute('id'));
+  clone.classList.add('fly-svg');
+  flyWrap.appendChild(clone);
+
+  const flyBubble=document.createElement('div');
+  flyBubble.className='fly-bubble';
+  flyWrap.appendChild(flyBubble);
+
+  document.body.appendChild(flyWrap);
+
+  requestAnimationFrame(()=>{
+    const destX=endRect.left+16-startRect.left;
+    const destY=endRect.top-startRect.height*0.55-startRect.top;
+    flyWrap.style.transform=`translate(${destX}px, ${destY}px) scale(0.8)`;
+  });
+
+  flyWrap.addEventListener('transitionend',function onArrive(e){
+    if(e.propertyName!=='transform')return;
+    flyWrap.removeEventListener('transitionend',onArrive);
+    flyWrap.classList.add('pointing');
+    if(flyMouth)flyMouth.setAttribute('d',MOUTH_SHAPES.excited);
+    flyBubble.style.opacity='1';
+    typeInto(flyBubble,'Meine Empfehlung ✦',22);
+
+    setTimeout(()=>{
+      flyWrap.classList.remove('pointing');
+      flyBubble.style.opacity='0';
+      flyWrap.style.transform='translate(0px, 0px) scale(1)';
+      flyWrap.addEventListener('transitionend',function onReturn(ev){
+        if(ev.propertyName!=='transform')return;
+        flyWrap.removeEventListener('transitionend',onReturn);
+        flyWrap.remove();
+        original.style.opacity='1';
+      });
+    },2800);
+  });
+}
+
+// Dynamische Sprechblase: reagiert auf das, was der Nutzer gerade eintippt.
+// Rein Keyword-basiert (kein zusätzlicher API-Call, keine Kosten, keine Latenz).
+const LIVE_SUGGESTIONS=[
+  ["smartwatch",'Suchst du eher eine <span class="sugg" data-fill="Sport-Smartwatch mit GPS und Pulsmesser">Sport-Smartwatch</span> oder eine fürs <span class="sugg" data-fill="Outdoor-Smartwatch fürs Wandern mit langer Akkulaufzeit">Wandern</span>?'],
+  ["kopfhörer",'Eher <span class="sugg" data-fill="In-Ear Kopfhörer kabellos für unterwegs">In-Ear</span> für unterwegs oder <span class="sugg" data-fill="Over-Ear Kopfhörer Noise Cancelling">Over-Ear</span> mit Noise Cancelling?'],
+  ["laptop",'Brauchst du ihn zum <span class="sugg" data-fill="Laptop für Büro und Office-Arbeit">Arbeiten</span>, zum <span class="sugg" data-fill="Gaming Laptop leistungsstark">Gaming</span> oder fürs <span class="sugg" data-fill="Laptop fürs Studium leicht und günstig">Studium</span>?'],
+  ["saugroboter",'Hast du <span class="sugg" data-fill="Saugroboter starke Tierhaar-Funktion WLAN">Haustiere</span>? Dann lohnt sich ein Modell mit starker Tierhaar-Funktion.'],
+  ["kaffee",'Bevorzugst du <span class="sugg" data-fill="Kapselmaschine Kaffee">Kapseln</span>, einen <span class="sugg" data-fill="Kaffeevollautomat mit Mahlwerk">Vollautomat</span> oder klassischen <span class="sugg" data-fill="Filterkaffeemaschine">Filterkaffee</span>?'],
+  ["zahnbürste",'Wichtig: lange <span class="sugg" data-fill="Elektrische Zahnbürste lange Akkulaufzeit">Akkulaufzeit</span> oder eher <span class="sugg" data-fill="Elektrische Reise-Zahnbürste kompakt">Reisetauglichkeit</span>?'],
+  ["mixer",'Für <span class="sugg" data-fill="Standmixer für Smoothies leise">Smoothies</span> oder auch zum <span class="sugg" data-fill="Standmixer mit Eiscrusher-Funktion">Crushen von Eis</span>?'],
+  ["standmixer",'Für <span class="sugg" data-fill="Standmixer für Smoothies leise">Smoothies</span> oder auch zum <span class="sugg" data-fill="Standmixer mit Eiscrusher-Funktion">Crushen von Eis</span>?'],
+];
+let liveSuggestTimer=null,lastLiveSuggested=null,defaultBubbleHTML=null;
+function initLiveMascot(){
+  const q=document.getElementById('query');
+  defaultBubbleHTML=document.getElementById('mascotBubble').innerHTML;
+  q.addEventListener('input',()=>{
+    clearTimeout(liveSuggestTimer);
+    liveSuggestTimer=setTimeout(()=>{
+      const val=q.value.toLowerCase().trim();
+      if(!val){lastLiveSuggested=null;setMascot(defaultBubbleHTML,'happy');return;}
+      const hit=LIVE_SUGGESTIONS.find(([kw])=>val.includes(kw));
+      if(hit&&hit[0]!==lastLiveSuggested){
+        lastLiveSuggested=hit[0];
+        setMascot(hit[1],'excited');
+      }
+    },1000);
+  });
+}
+initLiveMascot();
 
 async function callAPI(payload){
   const resp=await fetch(API_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
@@ -260,6 +427,7 @@ Jede category nur einmal. Antworte NUR mit dem JSON-Array.`;
     viewMode="grid";chatHistory=[];
     setMascot(`<b>Hier sind deine Top-Empfehlungen! ✦</b><br>Ich habe <b>${allProducts.length} passende Produkte</b> gefunden. Wähle bis zu 3 aus zum Vergleichen, oder frag mich unten!`,'excited');
     renderResults();
+    requestAnimationFrame(()=>setTimeout(flyMascotToRecommendation,400));
   }catch(e){
     out.innerHTML=`<div class="error"><strong>Fehler:</strong> ${e.message}<br><small>Prüfe ob dein Backend unter ${API_ENDPOINT} läuft.</small></div>`;
     setMascot('Ups, da ist etwas schiefgelaufen. Versuch es nochmal!');
