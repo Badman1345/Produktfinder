@@ -37,12 +37,14 @@ header{padding:28px 0 16px;}
 .bubble .sugg{display:inline-block;background:var(--accent-light);color:var(--accent);padding:1px 8px;border-radius:6px;font-weight:600;cursor:pointer;transition:background .12s;}
 .bubble .sugg:hover{background:#DFDCFB;}
 
-/* FLIEGENDER MASCOT (zeigt nach der Suche auf die Empfehlung) */
-.mascot-flying{position:fixed;top:0;left:0;z-index:60;pointer-events:none;transform:translate(0,0) scale(1);transition:transform 1.05s cubic-bezier(.34,1.56,.64,1);}
-.mascot-flying .fly-svg{width:100%;height:100%;display:block;animation:none;}
-.mascot-flying .arm-r{transform-origin:50px 40px;transition:transform .35s cubic-bezier(.34,1.56,.64,1);}
-.mascot-flying.pointing .arm-r{transform:rotate(58deg) scaleY(1.55);}
-.fly-bubble{position:absolute;left:100%;top:6px;margin-left:12px;min-width:150px;max-width:220px;white-space:normal;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:0;transition:opacity .25s ease;}
+/* MASCOT-DOCK: fester Platz zwischen Toolbar und Kachel-Grid, über der Preis-Leistungs-Karte */
+.mascot-dock{display:none;align-items:center;gap:14px;margin:20px 0 20px 2px;}
+.mascot-dock.show{display:flex;}
+.dock-svg{width:64px;height:64px;flex-shrink:0;animation:dockDrop .55s cubic-bezier(.34,1.56,.64,1);}
+.dock-svg .arm-r{transform-origin:50px 40px;transform:rotate(58deg) scaleY(1.5);}
+@keyframes dockDrop{from{transform:translateY(-34px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.dock-bubble{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 16px;font-size:14px;font-weight:600;color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.05);min-height:1.4em;}
+.dock-bubble::before{content:'';position:absolute;left:-6px;top:50%;transform:translateY(-50%) rotate(45deg);width:11px;height:11px;background:var(--surface);border-left:1px solid var(--border);border-bottom:1px solid var(--border);}
 
 /* SEARCH */
 .search-row{display:flex;gap:10px;margin-bottom:12px;}
@@ -293,68 +295,38 @@ document.getElementById('mascotBubble').addEventListener('click',e=>{
   }
 });
 
-// Setzt einen laufenden/abgeschlossenen Flug zurück (wird bei jeder neuen Suche aufgerufen).
-function clearMascotFlight(){
-  document.querySelectorAll('.mascot-flying').forEach(el=>el.remove());
-  const original=document.getElementById('mascotSvg');
-  if(original)original.style.opacity='1';
-}
+// Mascot-Dock: fester Platz zwischen Toolbar und Kachel-Grid, direkt über der
+// ersten (Preis-Leistungs-)Karte. Bleibt stehen, bis eine neue Suche startet.
+let dockBubbleHTML=null,dockAnimatePending=false;
 
-// Der Mascot fliegt nach der Suche zur ersten (Preis-Leistungs-)Karte, zeigt darauf
-// und bleibt dort stehen, bis eine neue Suche gestartet wird.
-function flyMascotToRecommendation(){
-  clearMascotFlight();
-  const original=document.getElementById('mascotSvg');
-  const target=document.querySelector('#output .card');
-  if(!original||!target)return;
-
-  const startRect=original.getBoundingClientRect();
-  const endRect=target.getBoundingClientRect();
-  original.style.opacity='0';
-
-  const flyWrap=document.createElement('div');
-  flyWrap.className='mascot-flying';
-  flyWrap.style.width=startRect.width+'px';
-  flyWrap.style.height=startRect.height+'px';
-  flyWrap.style.left=startRect.left+'px';
-  flyWrap.style.top=startRect.top+'px';
-  flyWrap.style.transform='translate(0px, 0px) scale(1)';
-
-  const clone=original.cloneNode(true);
-  const flyMouth=clone.querySelector('#mascotMouth');
-  clone.removeAttribute('id');
-  clone.querySelectorAll('[id]').forEach(elem=>elem.removeAttribute('id'));
-  clone.classList.add('fly-svg');
-  flyWrap.appendChild(clone);
-
-  const flyBubble=document.createElement('div');
-  flyBubble.className='fly-bubble';
-  flyWrap.appendChild(flyBubble);
-
-  document.body.appendChild(flyWrap);
-  // Reflow erzwingen, damit der Browser die Startposition erst "sieht", bevor
-  // wir die Zielposition setzen - sonst wird kein Flug sichtbar, nur ein Sprung.
-  flyWrap.getBoundingClientRect();
-
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      const destX=endRect.left+16-startRect.left;
-      const destY=endRect.top-startRect.height*0.55-startRect.top;
-      flyWrap.style.transform=`translate(${destX}px, ${destY}px) scale(0.8)`;
-    });
-  });
-
-  flyWrap.addEventListener('transitionend',function onArrive(e){
-    if(e.propertyName!=='transform')return;
-    flyWrap.removeEventListener('transitionend',onArrive);
-    flyWrap.classList.add('pointing');
-    if(flyMouth)flyMouth.setAttribute('d',MOUTH_SHAPES.excited);
-    flyBubble.style.opacity='1';
-    typeInto(flyBubble,'Meine Empfehlung ✦',22);
-    // Sprechblasen-Text nach ein paar Sekunden ausblenden - der Mascot selbst
-    // bleibt aber an der Kachel stehen, bis eine neue Suche startet.
-    setTimeout(()=>{flyBubble.style.opacity='0';},4200);
-  });
+function renderMascotDock(){
+  const dock=document.getElementById('mascotDock');
+  if(!dock)return;
+  if(!dockBubbleHTML||viewMode!=='grid'){dock.classList.remove('show');dock.innerHTML='';return;}
+  dock.classList.add('show');
+  dock.innerHTML=`
+    <svg class="dock-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="30" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="1.5"/>
+      <circle cx="32" cy="26" r="14" fill="#534AB7"/>
+      <circle class="eye" cx="27" cy="24" r="3.5" fill="white"/>
+      <circle class="eye" cx="37" cy="24" r="3.5" fill="white"/>
+      <circle cx="27.8" cy="24.6" r="1.8" fill="#26215C"/>
+      <circle cx="37.8" cy="24.6" r="1.8" fill="#26215C"/>
+      <path d="M26 29 Q32 35 38 29" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <rect x="20" y="38" width="24" height="16" rx="8" fill="#534AB7"/>
+      <rect class="arm arm-l" x="10" y="40" width="8" height="12" rx="4" fill="#7F77DD"/>
+      <rect class="arm arm-r" x="46" y="40" width="8" height="12" rx="4" fill="#7F77DD"/>
+      <circle cx="32" cy="10" r="4" fill="#FF9900"/>
+      <path d="M32 6 L33.5 10 L32 9 L30.5 10 Z" fill="#FF9900"/>
+    </svg>
+    <div class="dock-bubble" id="dockBubble"></div>`;
+  const bubble=document.getElementById('dockBubble');
+  if(dockAnimatePending){
+    typeInto(bubble,dockBubbleHTML,22);
+    dockAnimatePending=false;
+  }else{
+    bubble.innerHTML=dockBubbleHTML;
+  }
 }
 
 // Dynamische Sprechblase: reagiert auf das, was der Nutzer gerade eintippt.
@@ -400,7 +372,7 @@ async function doSearch(){
   if(!query)return;
   const btn=document.getElementById('searchBtn'),out=document.getElementById('output');
   btn.disabled=true;selectedIds.clear();chatHistory=[];
-  clearMascotFlight();
+  dockBubbleHTML=null;dockAnimatePending=false;
   setMascot('<span class="spinner"></span> Ich suche die besten Produkte für dich…','thinking');
   out.innerHTML='<div class="results">'+Array(6).fill('<div class="card skeleton"><div class="sk sk-visual"></div><div class="sk sk-line" style="width:40%"></div><div class="sk sk-line" style="width:85%"></div><div class="sk sk-line" style="width:70%"></div><div class="sk sk-line" style="width:100%;height:38px;margin-top:8px"></div></div>').join('')+'</div>';
 
@@ -429,8 +401,9 @@ Jede category nur einmal. Antworte NUR mit dem JSON-Array.`;
     allProducts.sort((a,b)=>(a.category==="Bestes Preis-Leistungs-Verhältnis"?0:1)-(b.category==="Bestes Preis-Leistungs-Verhältnis"?0:1));
     viewMode="grid";chatHistory=[];
     setMascot(`<b>Hier sind deine Top-Empfehlungen! ✦</b><br>Ich habe <b>${allProducts.length} passende Produkte</b> gefunden. Wähle bis zu 3 aus zum Vergleichen, oder frag mich unten!`,'excited');
+    dockBubbleHTML='Meine Empfehlung ✦';
+    dockAnimatePending=true;
     renderResults();
-    requestAnimationFrame(()=>setTimeout(flyMascotToRecommendation,400));
   }catch(e){
     out.innerHTML=`<div class="error"><strong>Fehler:</strong> ${e.message}<br><small>Prüfe ob dein Backend unter ${API_ENDPOINT} läuft.</small></div>`;
     setMascot('Ups, da ist etwas schiefgelaufen. Versuch es nochmal!');
@@ -447,9 +420,10 @@ function renderResults(){
       <button class="btn-sm ${viewMode==='compare'?'active':''}" onclick="setView('compare')"><i class="ti ti-columns"></i> Vergleich ${n>1?'('+n+')':''}</button>
       <span style="margin-left:auto;font-size:12px;color:var(--text-3);">${n>0?n+' ausgewählt':'Bis zu 3 zum Vergleich auswählen'}</span>
     </div>
+    <div class="mascot-dock" id="mascotDock"></div>
     <div id="cardsOrTable"></div>
     <div id="chatSection"></div>`;
-  renderView();renderChat();
+  renderView();renderChat();renderMascotDock();
 }
 function setView(m){
   if(m==='compare'&&selectedIds.size<2){setMascot('Wähle mindestens <b>2 Produkte</b> aus zum Vergleichen!','thinking');return;}
