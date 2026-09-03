@@ -293,16 +293,20 @@ document.getElementById('mascotBubble').addEventListener('click',e=>{
   }
 });
 
-// Der Mascot fliegt nach der Suche zur Empfehlungs-Karte, zeigt darauf
-// und sagt kurz "Meine Empfehlung".
-function flyMascotToRecommendation(){
+// Setzt einen laufenden/abgeschlossenen Flug zurück (wird bei jeder neuen Suche aufgerufen).
+function clearMascotFlight(){
   document.querySelectorAll('.mascot-flying').forEach(el=>el.remove());
   const original=document.getElementById('mascotSvg');
-  if(!original)return;
-  original.style.opacity='1';
-  const valueBadge=document.querySelector('#output .badge-value');
-  const target=(valueBadge&&valueBadge.closest('.card'))||document.querySelector('#output .card');
-  if(!target)return;
+  if(original)original.style.opacity='1';
+}
+
+// Der Mascot fliegt nach der Suche zur ersten (Preis-Leistungs-)Karte, zeigt darauf
+// und bleibt dort stehen, bis eine neue Suche gestartet wird.
+function flyMascotToRecommendation(){
+  clearMascotFlight();
+  const original=document.getElementById('mascotSvg');
+  const target=document.querySelector('#output .card');
+  if(!original||!target)return;
 
   const startRect=original.getBoundingClientRect();
   const endRect=target.getBoundingClientRect();
@@ -314,6 +318,7 @@ function flyMascotToRecommendation(){
   flyWrap.style.height=startRect.height+'px';
   flyWrap.style.left=startRect.left+'px';
   flyWrap.style.top=startRect.top+'px';
+  flyWrap.style.transform='translate(0px, 0px) scale(1)';
 
   const clone=original.cloneNode(true);
   const flyMouth=clone.querySelector('#mascotMouth');
@@ -327,11 +332,16 @@ function flyMascotToRecommendation(){
   flyWrap.appendChild(flyBubble);
 
   document.body.appendChild(flyWrap);
+  // Reflow erzwingen, damit der Browser die Startposition erst "sieht", bevor
+  // wir die Zielposition setzen - sonst wird kein Flug sichtbar, nur ein Sprung.
+  flyWrap.getBoundingClientRect();
 
   requestAnimationFrame(()=>{
-    const destX=endRect.left+16-startRect.left;
-    const destY=endRect.top-startRect.height*0.55-startRect.top;
-    flyWrap.style.transform=`translate(${destX}px, ${destY}px) scale(0.8)`;
+    requestAnimationFrame(()=>{
+      const destX=endRect.left+16-startRect.left;
+      const destY=endRect.top-startRect.height*0.55-startRect.top;
+      flyWrap.style.transform=`translate(${destX}px, ${destY}px) scale(0.8)`;
+    });
   });
 
   flyWrap.addEventListener('transitionend',function onArrive(e){
@@ -341,18 +351,9 @@ function flyMascotToRecommendation(){
     if(flyMouth)flyMouth.setAttribute('d',MOUTH_SHAPES.excited);
     flyBubble.style.opacity='1';
     typeInto(flyBubble,'Meine Empfehlung ✦',22);
-
-    setTimeout(()=>{
-      flyWrap.classList.remove('pointing');
-      flyBubble.style.opacity='0';
-      flyWrap.style.transform='translate(0px, 0px) scale(1)';
-      flyWrap.addEventListener('transitionend',function onReturn(ev){
-        if(ev.propertyName!=='transform')return;
-        flyWrap.removeEventListener('transitionend',onReturn);
-        flyWrap.remove();
-        original.style.opacity='1';
-      });
-    },2800);
+    // Sprechblasen-Text nach ein paar Sekunden ausblenden - der Mascot selbst
+    // bleibt aber an der Kachel stehen, bis eine neue Suche startet.
+    setTimeout(()=>{flyBubble.style.opacity='0';},4200);
   });
 }
 
@@ -399,6 +400,7 @@ async function doSearch(){
   if(!query)return;
   const btn=document.getElementById('searchBtn'),out=document.getElementById('output');
   btn.disabled=true;selectedIds.clear();chatHistory=[];
+  clearMascotFlight();
   setMascot('<span class="spinner"></span> Ich suche die besten Produkte für dich…','thinking');
   out.innerHTML='<div class="results">'+Array(6).fill('<div class="card skeleton"><div class="sk sk-visual"></div><div class="sk sk-line" style="width:40%"></div><div class="sk sk-line" style="width:85%"></div><div class="sk sk-line" style="width:70%"></div><div class="sk sk-line" style="width:100%;height:38px;margin-top:8px"></div></div>').join('')+'</div>';
 
@@ -424,6 +426,7 @@ Jede category nur einmal. Antworte NUR mit dem JSON-Array.`;
   try{
     const text=await callAPI({mode:"search",prompt});
     allProducts=parseProducts(text);
+    allProducts.sort((a,b)=>(a.category==="Bestes Preis-Leistungs-Verhältnis"?0:1)-(b.category==="Bestes Preis-Leistungs-Verhältnis"?0:1));
     viewMode="grid";chatHistory=[];
     setMascot(`<b>Hier sind deine Top-Empfehlungen! ✦</b><br>Ich habe <b>${allProducts.length} passende Produkte</b> gefunden. Wähle bis zu 3 aus zum Vergleichen, oder frag mich unten!`,'excited');
     renderResults();
